@@ -258,10 +258,31 @@ void readIMU() {
  * This function updates the robot's orientation based on the IMU data.
  --------------------------------------------------------------------------*/
 void updateOrientation() {
+  static float prevHeading = 0.0;
   float dTheta = 0.0;
+  const float gyroDataRate = 104.0;
 
-  /* calculate change in position and orientation */
-  dTheta = gyroZ * 0.1;  // time between readings in seconds
-  robotTheta += dTheta;
+
+
+    /* calculate change in orientation */
+  if (IMU.gyroscopeAvailable()) {
+    IMU.readGyroscope(gyroX, gyroY, gyroZ);
+    float deltaT = (1.0/gyroDataRate);  // time between readings in seconds
+    heading += gyroZ * deltaT;
+    if (heading > 360.0) {
+      heading -= 360.0;
+    }
+    else if (heading < 0.0) {
+      heading += 360.0;
+    }
+    dTheta = heading - prevHeading;
+    prevHeading = heading;
+  }
+  
+  /* update robot's orientation only if it has moved */
+  if (abs(dTheta) > 0.001) {
+    robotTheta += dTheta;
+  }
+}
   
 }
