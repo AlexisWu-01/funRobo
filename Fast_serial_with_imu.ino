@@ -42,17 +42,12 @@ Servo panServo, steerServo, velocityServo;
 boolean newData = false;             
 boolean recvCmd = false;
 
-/* initialize position and orientation variables */
-float robotX = 0.0;
-float robotY = 0.0;
+/* initialize the orientation variables */
 float robotTheta = 0.0;
 
 /* initialize IMU variables */
-sensors_event_t gyroEvent;
-sensors_event_t accelEvent;
 float gyroX, gyroY, gyroZ;
-float accelX, accelY, accelZ;
-float heading, pitch, roll;
+float heading;
 
 /*--------------------------------------------------------------------------
  * SETUP FUNCTION only runs once
@@ -155,13 +150,7 @@ void sendData(){
         strcat(sendChars, ",");
     }
 
-      /* add robot's position and orientation to the sendChars array */
-    char tmpX[8];
-    sprintf(tmpX, ",%d", robotX);
-    strcat(sendChars, tmpX);
-    char tmpY[8];
-    sprintf(tmpY, ",%d", robotY);
-    strcat(sendChars, tmpY);
+      /* add robot's orientation to the sendChars array */
     char tmpTheta[8];
     sprintf(tmpTheta, ",%d", robotTheta);
     strcat(sendChars, tmpTheta);
@@ -247,19 +236,10 @@ void parseString(){
  * This function reads the gyro and accelerometer data from the onboard IMU.
  --------------------------------------------------------------------------*/
 void readIMU() {
-  IMU.readGyro(&gyroEvent);
-  gyroX = gyroEvent.gyro.x;
-  gyroY = gyroEvent.gyro.y;
-  gyroZ = gyroEvent.gyro.z;
+   if (IMU.gyroscopeAvailable()) {
+    IMU.readGyroscope(gyroX, gyroY, gyroZ);
+  }
 
-  IMU.readAccelerometer(&accelEvent);
-  accelX = accelEvent.acceleration.x;
-  accelY = accelEvent.acceleration.y;
-  accelZ = accelEvent.acceleration.z;
-
-  /* calculate heading, pitch, and roll using the accelerometer data */
-  roll = atan2(-accelX, accelZ) * 180.0 / PI;
-  pitch = atan2(accelY, sqrt(accelX * accelX + accelZ * accelZ)) * 180.0 / PI;
 
   /* calculate heading using the gyro data */
   float deltaT = 0.1;  // time between readings in seconds
@@ -278,20 +258,10 @@ void readIMU() {
  * This function updates the robot's orientation based on the IMU data.
  --------------------------------------------------------------------------*/
 void updateOrientation() {
-  float dX = 0.0;
-  float dY = 0.0;
   float dTheta = 0.0;
 
   /* calculate change in position and orientation */
   dTheta = gyroZ * 0.1;  // time between readings in seconds
   robotTheta += dTheta;
-
-  /* calculate the X and Y components of the robot's displacement */
-  dX = sin(robotTheta * PI / 180.0) * accelY * 0.1;  // time between readings in seconds
-  dY = cos(robotTheta * PI / 180.0) * accelY * 0.1;  // time between readings in seconds
-
-  /* update the robot's position */
-  robotX += dX;
-  robotY += dY;
+  
 }
-
