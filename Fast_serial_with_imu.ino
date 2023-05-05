@@ -18,7 +18,6 @@ kmbanisi 2023, RevA
 #include <stdlib.h>
 #include <string.h>
 #include <Servo.h>
-#include <Arduino_LSM9DS1.h>
 
 
 /* initialize I/O pins */
@@ -42,12 +41,7 @@ Servo panServo, steerServo, velocityServo;
 boolean newData = false;             
 boolean recvCmd = false;
 
-/* initialize the orientation variables */
-float robotTheta = 0.0;
 
-/* initialize IMU variables */
-float gyroX, gyroY, gyroZ;
-float heading;
 
 /*--------------------------------------------------------------------------
  * SETUP FUNCTION only runs once
@@ -80,7 +74,6 @@ void loop() {
   recvData();           // reads data (cmd list) from MATLAB sent over serial
   writeToActuators();   // writes cmd list to actuators (servos)
   readSensors();        // reads sensor data from analog sensors
-  readIMU();            // reads data from the onboard IMU
   updateOrientation();   // updates robot orientation
   sendData();           // sends sensor data over serial to MATLAB
 
@@ -149,12 +142,6 @@ void sendData(){
       if (i < numSensors-1)
         strcat(sendChars, ",");
     }
-
-      /* add robot's orientation to the sendChars array */
-    char tmpTheta[8];
-    sprintf(tmpTheta, ",%d", robotTheta);
-    strcat(sendChars, tmpTheta);
-
     /* adds a terminator character to the end of the char array */
     char endChar[2] = ">";
     strcat(sendChars, endChar);
@@ -229,60 +216,4 @@ void parseString(){
           bufferIndex++;
       }
   }
-}
-
-/*--------------------------------------------------------------------------
- * READIMU function
- * This function reads the gyro and accelerometer data from the onboard IMU.
- --------------------------------------------------------------------------*/
-void readIMU() {
-   if (IMU.gyroscopeAvailable()) {
-    IMU.readGyroscope(gyroX, gyroY, gyroZ);
-  }
-
-
-  /* calculate heading using the gyro data */
-  float deltaT = 0.1;  // time between readings in seconds
-  heading += gyroZ * deltaT;
-  if (heading > 360.0) {
-    heading -= 360.0;
-  }
-  else if (heading < 0.0) {
-    heading += 360.0;
-  }
-}
-
-
-/*--------------------------------------------------------------------------
- * UPDATEORIENTATION function
- * This function updates the robot's orientation based on the IMU data.
- --------------------------------------------------------------------------*/
-void updateOrientation() {
-  static float prevHeading = 0.0;
-  float dTheta = 0.0;
-  const float gyroDataRate = 104.0;
-
-
-
-    /* calculate change in orientation */
-  if (IMU.gyroscopeAvailable()) {
-    IMU.readGyroscope(gyroX, gyroY, gyroZ);
-    float deltaT = (1.0/gyroDataRate);  // time between readings in seconds
-    heading += gyroZ * deltaT;
-    if (heading > 360.0) {
-      heading -= 360.0;
-    }
-    else if (heading < 0.0) {
-      heading += 360.0;
-    }
-    dTheta = heading - prevHeading;
-    prevHeading = heading;
-  }
-  
-  /* update robot's orientation only if it has moved */
-  if (abs(dTheta) > 0.001) {
-    robotTheta += dTheta;
-  }
-}
-  
 }
